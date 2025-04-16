@@ -1,0 +1,57 @@
+# === Général ===
+*.log
+*.tmp
+*.swp
+.DS_Store
+Thumbs.db
+
+# === IntelliJ IDEA ===
+.idea/
+*.iml
+
+# === Build Gradle ===
+.gradle/
+build/
+out/
+
+# === Gradle Wrapper ===
+!gradle/wrapper/gradle-wrapper.jar
+gradle/wrapper/gradle-wrapper.properties
+
+# === Fichiers système divers ===
+*.class
+*.jar
+*.war
+*.ear
+
+# === OS spécifiques ===
+# macOS
+*.DS_Store
+# Windows
+ehthumbs.db
+Icon?
+Thumbs.db
+desktop.ini
+
+# === VS Code (si utilisé) ===
+.vscode/
+
+# === Fichiers d'exécution/test ===
+bin/
+tmp/
+
+# === Logs de test ou de couverture ===
+test-results/
+coverage/
+*.ec
+*.exec
+
+# === Spring Boot spécifique ===
+*.h2.db
+*.mv.db
+*.trace.db
+
+# === Config temporaire ===
+HELP.md
+
+config-service/configs/

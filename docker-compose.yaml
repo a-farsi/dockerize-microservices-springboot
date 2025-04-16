@@ -1,0 +1,109 @@
+services:
+  my-discovery-service:
+    build: ./register-service
+    container_name: my-discovery-service
+    ports:
+      - '8761:8761'
+    expose:
+      - '8761'
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - /tmp:/app/data
+
+  my-config-service:
+    build: ./config-service
+    container_name: my-config-service
+    ports:
+      - '8888:8888'
+    expose:
+      - '8888'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
+    depends_on:
+      my-discovery-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8888/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - /tmp:/app/data
+
+  my-customer-service:
+    build: ./customer-service
+    container_name: my-customer-service
+    ports:
+      - '8084:8084'
+    expose:
+      - '8084'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    depends_on:
+      my-config-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8084/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - /tmp:/app/data
+  my-book-service:
+    build: ./book-service
+    container_name: my-book-service
+    ports:
+      - '8082:8082'
+    expose:
+      - '8082'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    depends_on:
+      my-customer-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - /tmp:/app/data
+  my-borrowing-service:
+    build: ./borrowing-service
+    container_name: my-borrowing-service
+    ports:
+      - '8085:8085'
+    expose:
+      - '8085'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    depends_on:
+      my-book-service:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8085/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+    volumes:
+      - /tmp:/app/data
+  my-proxy-service:
+    build: ./proxy-service
+    container_name: my-proxy-service
+    ports:
+      - '9999:9999'
+    expose:
+      - '9999'
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:8888
+    depends_on:
+      my-config-service:
+        condition: service_healthy

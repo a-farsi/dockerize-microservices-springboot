@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: register-service
+  #config:
+  #  import: optional:configserver:http://localhost:8888
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+eureka:
+  client:
+    register-with-eureka: false
+    fetch-registry: false
+server:
+  port: 8761

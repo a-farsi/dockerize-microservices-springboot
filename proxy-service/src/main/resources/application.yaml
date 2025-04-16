@@ -1,0 +1,29 @@
+spring:
+  application:
+    name: proxy-service
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          lower-case-service-id: true
+  config:
+    import: optional:configserver:${CONFIG_SERVICE_URL:http://localhost:8888}
+#spring:
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: r1
+#          uri: lb://BOOK-SERVICE
+#          predicates:
+#            Path= /books/**
+#        - id: r2
+#          uri: lb://BORROWING-SERVICE
+#          predicates:
+#            Path= /borrows/**
+server:
+  port: 9999
+
+eureka:
+  client:
+    service-url:
+      defaultZone: ${DISCOVERY_SERVICE_URL:http://localhost:8761/eureka}

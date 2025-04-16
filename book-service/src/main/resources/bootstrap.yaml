@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: book-service
+  config:
+    import: optional:configserver:${CONFIG_SERVICE_URL:http://localhost:8888}
+
+  jackson:
+    default-property-inclusion: non_null
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+server:
+  port: 8082
+
