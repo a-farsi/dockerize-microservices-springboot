@@ -3,7 +3,6 @@ spring:
     name: borrowing-service
   config:
     import: optional:configserver:${CONFIG_SERVICE_URL:http://localhost:8888}
-
 server:
   port: 8085
 

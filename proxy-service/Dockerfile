@@ -1,6 +1,12 @@
-FROM openjdk:17-oracle
-LABEL authors="afa"
+# Build stage
+FROM gradle:8.5-jdk17 AS builder
 WORKDIR /app
-COPY build/libs/*.jar myApp.jar
-VOLUME /app/data
-ENTRYPOINT ["java", "-jar", "myApp.jar"]
+COPY . .
+RUN gradle bootJar --no-daemon
+
+# Runtime stage with Alpine
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/build/libs/*.jar app.jar
+RUN apk add --no-cache curl
+ENTRYPOINT ["java", "-jar", "app.jar"]

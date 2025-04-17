@@ -12,6 +12,7 @@ jar {
 }
 
 bootJar {
+    launchScript()
     enabled = true
 }
 

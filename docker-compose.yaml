@@ -1,109 +1,201 @@
 services:
+  customer-db:
+    image: postgres:16
+    env_file: ./.env
+    container_name: customer-db
+    environment:
+      POSTGRES_DB: ${POSTGRESDB_DB_CUSTOMER}
+      POSTGRES_USER: ${POSTGRESDB_USER_CUSTOMER}
+      POSTGRES_PASSWORD: ${POSTGRESDB_PWD_CUSTOMER}
+    volumes:
+      - customer-db-data:/var/lib/postgresql/data
+    ports:
+      - "${CUSTOMERDB_HOST_PORT}:${POSTGRESDB_DOCKER_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESDB_USER_CUSTOMER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  book-db:
+    image: postgres:16
+    env_file: ./.env
+    container_name: book-db
+    environment:
+      POSTGRES_DB: ${POSTGRESDB_DB_BOOK}
+      POSTGRES_USER: ${POSTGRESDB_USER_BOOK}
+      POSTGRES_PASSWORD: ${POSTGRESDB_PWD_BOOK}
+    volumes:
+      - book-db-data:/var/lib/postgresql/data
+    ports:
+      - "${BOOKDB_HOST_PORT}:${POSTGRESDB_DOCKER_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESDB_USER_BOOK}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  borrowing-db:
+    image: postgres:16
+    env_file: ./.env
+    container_name: borrowing-db
+    environment:
+      POSTGRES_DB: ${POSTGRESDB_DB_BORROWING}
+      POSTGRES_USER: ${POSTGRESDB_USER_BORROWING}
+      POSTGRES_PASSWORD: ${POSTGRESDB_PWD_BORROWING}
+    volumes:
+      - borrowing-db-data:/var/lib/postgresql/data
+    ports:
+      - "${BORROWINGDB_HOST_PORT}:${POSTGRESDB_DOCKER_PORT}"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESDB_USER_BORROWING}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   my-discovery-service:
     build: ./register-service
+    image: my-discovery-service:v1
+    env_file: ./.env
     container_name: my-discovery-service
     ports:
-      - '8761:8761'
+      - "${DISCOVERY_HOST_PORT}:${DISCOVERY_DOCKER_PORT}"
     expose:
-      - '8761'
+      - "${DISCOVERY_DOCKER_PORT}"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8761/actuator/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:${DISCOVERY_DOCKER_PORT}/actuator/health" ]
       interval: 10s
       timeout: 10s
       retries: 5
-    volumes:
-      - /tmp:/app/data
 
   my-config-service:
     build: ./config-service
+    image: my-config-service:v1
+    env_file: ./.env
     container_name: my-config-service
     ports:
-      - '8888:8888'
+      - "${CONFIG_HOST_PORT}:${CONFIG_DOCKER_PORT}"
     expose:
-      - '8888'
+      - "${CONFIG_DOCKER_PORT}"
     environment:
-      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:${DISCOVERY_DOCKER_PORT}/eureka
     depends_on:
       my-discovery-service:
         condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8888/actuator/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:${CONFIG_DOCKER_PORT}/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  my-customer-service:
+    build: ./customer-service
+    image: my-customer-service:v1
+    env_file: ./.env
+    container_name: my-customer-service
+    ports:
+      - "${CUSTOMER_HOST_PORT}:${CUSTOMER_DOCKER_PORT}"
+    expose:
+      - "${CUSTOMER_DOCKER_PORT}"
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:${DISCOVERY_DOCKER_PORT}/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:${CONFIG_DOCKER_PORT}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://customer-db:${POSTGRESDB_DOCKER_PORT}/${POSTGRESDB_DB_CUSTOMER}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRESDB_USER_CUSTOMER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRESDB_PWD_CUSTOMER}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+    depends_on:
+      my-config-service:
+        condition: service_healthy
+      customer-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${CUSTOMER_DOCKER_PORT}/actuator/health" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  my-book-service:
+    build: ./book-service
+    image: my-book-service:v1
+    env_file: ./.env
+    container_name: my-book-service
+    ports:
+      - "${BOOK_HOST_PORT}:${BOOK_DOCKER_PORT}"
+    expose:
+      - "${BOOK_DOCKER_PORT}"
+    environment:
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:${DISCOVERY_DOCKER_PORT}/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:${CONFIG_DOCKER_PORT}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://book-db:${POSTGRESDB_DOCKER_PORT}/${POSTGRESDB_DB_BOOK}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRESDB_USER_BOOK}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRESDB_PWD_BOOK}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
+    depends_on:
+      my-customer-service:
+        condition: service_healthy
+      book-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${BOOK_DOCKER_PORT}/actuator/health" ]
       interval: 10s
       timeout: 10s
       retries: 5
     volumes:
       - /tmp:/app/data
 
-  my-customer-service:
-    build: ./customer-service
-    container_name: my-customer-service
-    ports:
-      - '8084:8084'
-    expose:
-      - '8084'
-    environment:
-      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
-      - CONFIG_SERVICE_URL=http://my-config-service:8888
-    depends_on:
-      my-config-service:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8084/actuator/health" ]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    volumes:
-      - /tmp:/app/data
-  my-book-service:
-    build: ./book-service
-    container_name: my-book-service
-    ports:
-      - '8082:8082'
-    expose:
-      - '8082'
-    environment:
-      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
-      - CONFIG_SERVICE_URL=http://my-config-service:8888
-    depends_on:
-      my-customer-service:
-        condition: service_healthy
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8082/actuator/health" ]
-      interval: 10s
-      timeout: 10s
-      retries: 5
-    volumes:
-      - /tmp:/app/data
   my-borrowing-service:
     build: ./borrowing-service
+    image: my-borrowing-service:v1
+    env_file: ./.env
     container_name: my-borrowing-service
     ports:
-      - '8085:8085'
+      - "${BORROWING_HOST_PORT}:${BORROWING_DOCKER_PORT}"
     expose:
-      - '8085'
+      - "${BORROWING_DOCKER_PORT}"
     environment:
-      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
-      - CONFIG_SERVICE_URL=http://my-config-service:8888
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:${DISCOVERY_DOCKER_PORT}/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:${CONFIG_DOCKER_PORT}
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://borrowing-db:${POSTGRESDB_DOCKER_PORT}/${POSTGRESDB_DB_BORROWING}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRESDB_USER_BORROWING}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRESDB_PWD_BORROWING}
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=org.hibernate.dialect.PostgreSQLDialect
     depends_on:
       my-book-service:
         condition: service_healthy
+      borrowing-db:
+        condition: service_healthy
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8085/actuator/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:${BORROWING_DOCKER_PORT}/actuator/health" ]
       interval: 10s
       timeout: 10s
       retries: 5
     volumes:
       - /tmp:/app/data
+
   my-proxy-service:
     build: ./proxy-service
+    image: my-proxy-service:v1
+    env_file: ./.env
     container_name: my-proxy-service
     ports:
-      - '9999:9999'
+      - "${GATEWAY_PORT}:${GATEWAY_DOCKER_PORT}"
     expose:
-      - '9999'
+      - "${GATEWAY_DOCKER_PORT}"
     environment:
-      - DISCOVERY_SERVICE_URL=http://my-discovery-service:8761/eureka
-      - CONFIG_SERVICE_URL=http://my-config-service:8888
+      - DISCOVERY_SERVICE_URL=http://my-discovery-service:${DISCOVERY_DOCKER_PORT}/eureka
+      - CONFIG_SERVICE_URL=http://my-config-service:${CONFIG_DOCKER_PORT}
     depends_on:
       my-config-service:
         condition: service_healthy
+
+volumes:
+  customer-db-data:
+  book-db-data:
+  borrowing-db-data:
